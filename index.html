@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Matrix iteration (C1–C16)</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --text: #e7ecf3;
+      --muted: #8b98a5;
+      --accent: #3d8bfd;
+      --border: #2d3a4d;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f4f6f9;
+        --panel: #fff;
+        --text: #1a2332;
+        --muted: #5c6b7a;
+        --accent: #0b57d0;
+        --border: #d0d7de;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+    main {
+      max-width: 56rem;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 3rem;
+    }
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 0 0 0.25rem;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 1.25rem;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.1rem;
+      margin-bottom: 1rem;
+    }
+    label { display: block; font-size: 0.875rem; margin-bottom: 0.35rem; color: var(--muted); }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: flex-end;
+    }
+    input[type="number"] {
+      width: 8rem;
+      padding: 0.5rem 0.65rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 1rem;
+    }
+    button {
+      padding: 0.55rem 1.1rem;
+      border-radius: 8px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover { filter: brightness(1.08); }
+    button:active { transform: scale(0.98); }
+    #out {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.78rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 0;
+      max-height: min(75vh, 40rem);
+      overflow: auto;
+    }
+    .err { color: #f85149; margin-top: 0.5rem; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Matrix iteration program</h1>
+    <p class="sub">Same rules as <code>MatrixIteration.java</code>. Runs entirely in your browser.</p>
+
+    <div class="panel">
+      <form id="form" class="row">
+        <div>
+          <label for="L">Number of iterations (L)</label>
+          <input id="L" type="number" min="1" max="5000" value="3" required />
+        </div>
+        <button type="submit">Run</button>
+      </form>
+      <p id="L-display" class="sub" style="margin:0.75rem 0 0;"></p>
+      <div id="error" class="err" hidden></div>
+    </div>
+
+    <div class="panel">
+      <pre id="out"></pre>
+    </div>
+  </main>
+
+  <script>
+(function () {
+  const Y = "Y";
+  const X = "X";
+
+  function createMatrix(row0, row1, row2, row3) {
+    const cells = [
+      Array(4).fill(row0),
+      Array(4).fill(row1),
+      Array(4).fill(row2),
+      Array(4).fill(row3),
+    ];
+    return { cells };
+  }
+
+  function cloneMatrix(m) {
+    return { cells: m.cells.map((row) => row.slice()) };
+  }
+
+  function flipHorizontal(source) {
+    const result = cloneMatrix(source);
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 2; c++) {
+        const temp = result.cells[r][c];
+        result.cells[r][c] = result.cells[r][3 - c];
+        result.cells[r][3 - c] = temp;
+      }
+    }
+    return result;
+  }
+
+  function addCells(a, b) {
+    if (a === Y && b === Y) return Y;
+    if (a === X && b === X) return Y;
+    return X;
+  }
+
+  function add(left, right) {
+    const result = cloneMatrix(left);
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        result.cells[r][c] = addCells(left.cells[r][c], right.cells[r][c]);
+      }
+    }
+    return result;
+  }
+
+  function addChain(...matrices) {
+    let result = cloneMatrix(matrices[0]);
+    for (let i = 1; i < matrices.length; i++) {
+      result = add(result, matrices[i]);
+    }
+    return result;
+  }
+
+  function equals(a, b) {
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        if (a.cells[r][c] !== b.cells[r][c]) return false;
+      }
+    }
+    return true;
+  }
+
+  function countMatchingPositions(a, b) {
+    let matches = 0;
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        if (a.cells[r][c] === b.cells[r][c]) matches++;
+      }
+    }
+    return matches;
+  }
+
+  function matrixToString(m) {
+    return m.cells.map((row) => row.join(" ")).join("\n");
+  }
+
+  const Z = [
+    createMatrix(X, X, X, X),
+    createMatrix(Y, X, Y, X),
+    createMatrix(X, Y, X, X),
+    createMatrix(Y, X, X, Y),
+    createMatrix(Y, Y, Y, X),
+    createMatrix(Y, Y, X, Y),
+    createMatrix(Y, X, X, X),
+    createMatrix(Y, Y, X, X),
+    createMatrix(X, X, Y, Y),
+    createMatrix(X, X, X, Y),
+    createMatrix(Y, X, Y, Y),
+    createMatrix(X, Y, Y, Y),
+    createMatrix(X, Y, Y, X),
+    createMatrix(X, X, Y, X),
+    createMatrix(X, Y, X, Y),
+    createMatrix(Y, Y, Y, Y),
+  ];
+
+  const C20_ALLOWED = [0, 5, 9, 14];
+  const C15_RESTART = [0, 6, 10];
+
+  function matchesAnyZ(matrix, indices) {
+    return indices.some((i) => equals(matrix, Z[i]));
+  }
+
+  function zLabel(matrix) {
+    for (let i = 0; i < Z.length; i++) {
+      if (equals(matrix, Z[i])) return i + 1;
+    }
+    return -1;
+  }
+
+  function zName(matrix) {
+    const label = zLabel(matrix);
+    return label > 0 ? "Z" + label : matrixToString(matrix).replace(/\n/g, "/");
+  }
+
+  function shuffle(arr) {
+    const copy = arr.slice();
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  }
+
+  function combinedRow(c4, c3, c2, c1, row) {
+    const fmt = (m) => m.cells[row].join(" ");
+    return fmt(c4) + " | " + fmt(c3) + " | " + fmt(c2) + " | " + fmt(c1);
+  }
+
+  function runIteration(iteration) {
+    let text = "";
+
+    while (true) {
+      const indices = shuffle([...Array(16).keys()]);
+      const c1 = cloneMatrix(Z[indices[0]]);
+      const c2 = cloneMatrix(Z[indices[1]]);
+      const c3 = cloneMatrix(Z[indices[2]]);
+      const c4 = cloneMatrix(Z[indices[3]]);
+
+      text += "--- Iteration " + iteration + " ---\n";
+      text += "Selected: C1=" + zName(c1) + ", C2=" + zName(c2)
+        + ", C3=" + zName(c3) + ", C4=" + zName(c4) + "\n\n";
+      text += "Arrangement (C4  C3  C2  C1):\n";
+      text += "Row 1  " + combinedRow(c4, c3, c2, c1, 0) + "\n";
+      text += "Row 2  " + combinedRow(c4, c3, c2, c1, 1) + "\n";
+      text += "Row 3  " + combinedRow(c4, c3, c2, c1, 2) + "\n";
+      text += "Row 4  " + combinedRow(c4, c3, c2, c1, 3) + "\n\n";
+
+      const c5 = flipHorizontal(c1);
+      const c6 = flipHorizontal(c2);
+      const c7 = flipHorizontal(c3);
+      const c8 = flipHorizontal(c4);
+
+      const c9 = add(c1, c2);
+      const c10 = add(c3, c4);
+      const c11 = add(c5, c6);
+      const c12 = add(c7, c8);
+      const c13 = add(c9, c10);
+      const c14 = add(c11, c12);
+      const c15 = add(c13, c14);
+      const c16 = add(c15, c1);
+
+      if (matchesAnyZ(c15, C15_RESTART)) {
+        text += "C15 equals " + zName(c15) + " -> restarting iteration "
+          + iteration + " from START.\n\n";
+        continue;
+      }
+
+      const c18 = addChain(c1, c4, c7, c10);
+      const c20 = addChain(c3, c7, c11, c15);
+
+      if (matchesAnyZ(c20, C20_ALLOWED)) {
+        text += "C20 = " + zName(c20) + "\n" + matrixToString(c20) + "\n";
+      } else {
+        text += "C20 = Nil\n";
+      }
+      text += "\n";
+
+      const allC = [c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16];
+      const matches = [];
+      for (let i = 0; i < allC.length; i++) {
+        const places = countMatchingPositions(c18, allC[i]);
+        if (places >= 4) {
+          matches.push("C" + (i + 1) + " (" + places + " places)");
+        }
+      }
+
+      if (matches.length) {
+        text += "C18 matches in four or more places (iteration " + iteration + "):\n";
+        text += "C18:\n" + matrixToString(c18) + "\n\n";
+        text += "Iteration   Matching C values\n";
+        text += "---------   ------------------\n";
+        text += String(iteration).padEnd(12) + matches.join(", ") + "\n";
+      }
+
+      break;
+    }
+
+    return text;
+  }
+
+  function runProgram(L) {
+    let text = "Number of iterations: " + L + "\n\n";
+    for (let iteration = 1; iteration <= L; iteration++) {
+      text += runIteration(iteration) + "\n";
+    }
+    text += "END.\n";
+    return text;
+  }
+
+  const form = document.getElementById("form");
+  const Linput = document.getElementById("L");
+  const out = document.getElementById("out");
+  const err = document.getElementById("error");
+  const Ldisplay = document.getElementById("L-display");
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    err.hidden = true;
+    const L = parseInt(Linput.value, 10);
+    if (!Number.isFinite(L) || L < 1) {
+      err.textContent = "Enter a positive integer for L.";
+      err.hidden = false;
+      return;
+    }
+    if (L > 5000) {
+      err.textContent = "L is capped at 5000 in the browser to keep the page responsive.";
+      err.hidden = false;
+      return;
+    }
+    Ldisplay.textContent = "Number of iterations L = " + L;
+    out.textContent = "Running…";
+    requestAnimationFrame(function () {
+      try {
+        out.textContent = runProgram(L);
+      } catch (ex) {
+        out.textContent = "";
+        err.textContent = String(ex.message || ex);
+        err.hidden = false;
+      }
+    });
+  });
+})();
+  </script>
+</body>
+</html>
