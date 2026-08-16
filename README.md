@@ -1,30 +1,33 @@
-# Matrix iteration program
+# A / N Column Simulator
 
-Java console program and browser UI for the Z1–Z16 matrix iteration rules (C1–C16, C18, C20).
+Single-page web app that simulates **L** iterations across 5 columns. Each cell draws a random number from a fixed pool of 32 values and outputs **A** or **N**.
 
-## Java
+## Live site
+
+- **GitHub Pages:** https://bolajifuga1.github.io/matrix-iteration/
+- **Vercel:** https://matrix-iteration.vercel.app
+
+## Run locally
+
+Open `index.html` in a browser, or:
+
+```bash
+python3 -m http.server 8765
+```
+
+Then visit http://localhost:8765/
+
+## Features
+
+- Set **L** (default 69), Generate, Copy Table, Download CSV / TXT
+- Scrollable table: `Iter, 1, 2, 3, 4, 5`
+- Counter: total A's and N's
+
+## Java (legacy)
+
+The original Z1–Z16 matrix console program is still in `MatrixIteration.java`:
 
 ```bash
 javac MatrixIteration.java
 java MatrixIteration
 ```
-
-Enter `L` (number of iterations) when prompted.
-
-## Web (Vercel)
-
-Open `index.html` locally or deploy this repo to [Vercel](https://vercel.com) as a static site (no build step).
-
-```bash
-npx vercel --prod
-```
-
-## Rules
-
-- Randomly select four distinct patterns from Z1–Z16 → C1, C2, C3, C4
-- C5–C8: horizontal flip of C1–C4
-- C9–C16: pairwise horizontal addition
-- Arithmetic: Y+Y=Y, Y+X=X, X+X=Y
-- Restart iteration if C15 is Z1, Z7, or Z11
-- C18 = C1 + C4 + C7 + C10
-- C20 = C3 + C7 + C11 + C15 (print if Z1, Z6, Z10, or Z15; else Nil)
