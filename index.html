@@ -3,362 +3,616 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Matrix iteration (C1–C16)</title>
+  <title>A / N Column Simulator</title>
   <style>
+    /* ---- Layout & theme ---- */
     :root {
-      color-scheme: light dark;
-      --bg: #0f1419;
-      --panel: #1a2332;
-      --text: #e7ecf3;
-      --muted: #8b98a5;
-      --accent: #3d8bfd;
-      --border: #2d3a4d;
+      --bg: #f0f2f5;
+      --panel: #ffffff;
+      --text: #1a1d23;
+      --muted: #5c6570;
+      --border: #d0d5dd;
+      --accent: #1a6b4a;
+      --accent-hover: #155a3e;
+      --a-color: #1a6b4a;
+      --n-color: #8a4b2a;
+      --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     }
-    @media (prefers-color-scheme: light) {
-      :root {
-        --bg: #f4f6f9;
-        --panel: #fff;
-        --text: #1a2332;
-        --muted: #5c6b7a;
-        --accent: #0b57d0;
-        --border: #d0d7de;
-      }
+
+    * {
+      box-sizing: border-box;
     }
-    * { box-sizing: border-box; }
+
     body {
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
       margin: 0;
       min-height: 100vh;
-      line-height: 1.5;
+      font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+      background:
+        radial-gradient(ellipse at 20% 0%, #e4ebe7 0%, transparent 50%),
+        radial-gradient(ellipse at 90% 10%, #ebe6e0 0%, transparent 45%),
+        var(--bg);
+      color: var(--text);
+      line-height: 1.45;
     }
+
     main {
-      max-width: 56rem;
+      max-width: 42rem;
       margin: 0 auto;
-      padding: 1.5rem 1rem 3rem;
+      padding: 1.25rem 1rem 2.5rem;
     }
+
     h1 {
-      font-size: 1.25rem;
-      font-weight: 600;
-      margin: 0 0 0.25rem;
+      font-size: 1.35rem;
+      font-weight: 650;
+      margin: 0 0 0.2rem;
+      letter-spacing: -0.02em;
     }
+
     .sub {
       color: var(--muted);
       font-size: 0.9rem;
-      margin-bottom: 1.25rem;
+      margin: 0 0 1.1rem;
     }
+
+    /* ---- Controls ---- */
     .panel {
       background: var(--panel);
       border: 1px solid var(--border);
       border-radius: 10px;
-      padding: 1rem 1.1rem;
-      margin-bottom: 1rem;
+      padding: 1rem;
+      margin-bottom: 0.9rem;
+      box-shadow: var(--shadow);
     }
-    label { display: block; font-size: 0.875rem; margin-bottom: 0.35rem; color: var(--muted); }
-    .row {
+
+    .controls {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.75rem;
+      gap: 0.65rem;
       align-items: flex-end;
     }
-    input[type="number"] {
-      width: 8rem;
-      padding: 0.5rem 0.65rem;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      background: var(--bg);
-      color: var(--text);
-      font-size: 1rem;
+
+    .field {
+      flex: 1 1 8rem;
+      min-width: 7rem;
     }
-    button {
-      padding: 0.55rem 1.1rem;
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 0.3rem;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      padding: 0.5rem 0.65rem;
+      border: 1px solid var(--border);
       border-radius: 8px;
+      font-size: 1rem;
+      background: #fafbfc;
+      color: var(--text);
+    }
+
+    input[type="number"]:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      flex: 2 1 14rem;
+    }
+
+    button {
+      padding: 0.5rem 0.9rem;
       border: none;
+      border-radius: 8px;
       background: var(--accent);
       color: #fff;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       font-weight: 600;
       cursor: pointer;
+      white-space: nowrap;
     }
-    button:hover { filter: brightness(1.08); }
-    button:active { transform: scale(0.98); }
-    #out {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 0.78rem;
-      white-space: pre-wrap;
-      word-break: break-word;
-      margin: 0;
-      max-height: min(75vh, 40rem);
+
+    button:hover:not(:disabled) {
+      background: var(--accent-hover);
+    }
+
+    button:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    button.secondary {
+      background: #3d4a57;
+    }
+
+    button.secondary:hover:not(:disabled) {
+      background: #2f3a45;
+    }
+
+    .err {
+      color: #b42318;
+      font-size: 0.88rem;
+      margin: 0.65rem 0 0;
+    }
+
+    .err[hidden] {
+      display: none;
+    }
+
+    /* ---- Table ---- */
+    .table-wrap {
+      max-height: min(70vh, 36rem);
       overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      -webkit-overflow-scrolling: touch;
     }
-    .err { color: #f85149; margin-top: 0.5rem; font-size: 0.9rem; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: "IBM Plex Mono", "SF Mono", Menlo, Consolas, monospace;
+      font-size: 0.85rem;
+      table-layout: fixed;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #e8ecef;
+      border-bottom: 2px solid var(--border);
+      padding: 0.45rem 0.35rem;
+      text-align: center;
+      font-weight: 650;
+    }
+
+    /* First column (Iter) slightly wider for large L */
+    thead th:first-child,
+    tbody td:first-child {
+      width: 18%;
+      text-align: right;
+      padding-right: 0.75rem;
+      color: var(--muted);
+    }
+
+    tbody td {
+      text-align: center;
+      padding: 0.28rem 0.25rem;
+      border-bottom: 1px solid #eef0f3;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #f7f8fa;
+    }
+
+    td.cell-a {
+      color: var(--a-color);
+      font-weight: 650;
+    }
+
+    td.cell-n {
+      color: var(--n-color);
+    }
+
+    .empty {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin: 0;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    /* ---- Counter ---- */
+    .stats {
+      margin: 0.75rem 0 0;
+      font-family: "IBM Plex Mono", "SF Mono", Menlo, Consolas, monospace;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 1.25rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(120%);
+      background: #1a1d23;
+      color: #fff;
+      padding: 0.55rem 1rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      opacity: 0;
+      transition: transform 0.25s ease, opacity 0.25s ease;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    @media (max-width: 480px) {
+      table {
+        font-size: 0.78rem;
+      }
+      button {
+        flex: 1 1 calc(50% - 0.5rem);
+      }
+    }
   </style>
 </head>
 <body>
   <main>
-    <h1>Matrix iteration program</h1>
-    <p class="sub">Same rules as <code>MatrixIteration.java</code>. Runs entirely in your browser.</p>
+    <h1>A / N Column Simulator</h1>
+    <p class="sub">
+      L rows × 5 columns. Each cell draws from 32 fixed numbers;
+      A-list → <strong>A</strong>, otherwise → <strong>N</strong>.
+    </p>
 
+    <!-- Controls -->
     <div class="panel">
-      <form id="form" class="row">
-        <div>
-          <label for="L">Number of iterations (L)</label>
-          <input id="L" type="number" min="1" max="5000" value="3" required />
+      <div class="controls">
+        <div class="field">
+          <label for="L">L = number of iterations</label>
+          <input id="L" type="number" min="1" max="10000" value="69" />
         </div>
-        <button type="submit">Run</button>
-      </form>
-      <p id="L-display" class="sub" style="margin:0.75rem 0 0;"></p>
-      <div id="error" class="err" hidden></div>
+        <div class="btn-row">
+          <button type="button" id="btn-generate">Generate</button>
+          <button type="button" id="btn-copy" class="secondary" disabled>Copy Table</button>
+          <button type="button" id="btn-csv" class="secondary" disabled>Download CSV</button>
+          <button type="button" id="btn-txt" class="secondary" disabled>Download TXT</button>
+        </div>
+      </div>
+      <p id="error" class="err" hidden></p>
     </div>
 
+    <!-- Results -->
     <div class="panel">
-      <pre id="out"></pre>
+      <div class="table-wrap" id="table-wrap">
+        <p class="empty" id="placeholder">Click Generate to run the simulation.</p>
+        <!-- Table is injected here after generate -->
+      </div>
+      <p class="stats" id="stats" hidden></p>
     </div>
   </main>
 
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
   <script>
 (function () {
-  const Y = "Y";
-  const X = "X";
+  "use strict";
 
-  function createMatrix(row0, row1, row2, row3) {
-    const cells = [
-      Array(4).fill(row0),
-      Array(4).fill(row1),
-      Array(4).fill(row2),
-      Array(4).fill(row3),
-    ];
-    return { cells };
-  }
-
-  function cloneMatrix(m) {
-    return { cells: m.cells.map((row) => row.slice()) };
-  }
-
-  function flipHorizontal(source) {
-    const result = cloneMatrix(source);
-    for (let r = 0; r < 4; r++) {
-      for (let c = 0; c < 2; c++) {
-        const temp = result.cells[r][c];
-        result.cells[r][c] = result.cells[r][3 - c];
-        result.cells[r][3 - c] = temp;
-      }
-    }
-    return result;
-  }
-
-  function addCells(a, b) {
-    if (a === Y && b === Y) return Y;
-    if (a === X && b === X) return Y;
-    return X;
-  }
-
-  function add(left, right) {
-    const result = cloneMatrix(left);
-    for (let r = 0; r < 4; r++) {
-      for (let c = 0; c < 4; c++) {
-        result.cells[r][c] = addCells(left.cells[r][c], right.cells[r][c]);
-      }
-    }
-    return result;
-  }
-
-  function addChain(...matrices) {
-    let result = cloneMatrix(matrices[0]);
-    for (let i = 1; i < matrices.length; i++) {
-      result = add(result, matrices[i]);
-    }
-    return result;
-  }
-
-  function equals(a, b) {
-    for (let r = 0; r < 4; r++) {
-      for (let c = 0; c < 4; c++) {
-        if (a.cells[r][c] !== b.cells[r][c]) return false;
-      }
-    }
-    return true;
-  }
-
-  function countMatchingPositions(a, b) {
-    let matches = 0;
-    for (let r = 0; r < 4; r++) {
-      for (let c = 0; c < 4; c++) {
-        if (a.cells[r][c] === b.cells[r][c]) matches++;
-      }
-    }
-    return matches;
-  }
-
-  function matrixToString(m) {
-    return m.cells.map((row) => row.join(" ")).join("\n");
-  }
-
-  const Z = [
-    createMatrix(X, X, X, X),
-    createMatrix(Y, X, Y, X),
-    createMatrix(X, Y, X, X),
-    createMatrix(Y, X, X, Y),
-    createMatrix(Y, Y, Y, X),
-    createMatrix(Y, Y, X, Y),
-    createMatrix(Y, X, X, X),
-    createMatrix(Y, Y, X, X),
-    createMatrix(X, X, Y, Y),
-    createMatrix(X, X, X, Y),
-    createMatrix(Y, X, Y, Y),
-    createMatrix(X, Y, Y, Y),
-    createMatrix(X, Y, Y, X),
-    createMatrix(X, X, Y, X),
-    createMatrix(X, Y, X, Y),
-    createMatrix(Y, Y, Y, Y),
+  // -------------------------------------------------------------------------
+  // Fixed number lists (32 pool numbers; 13 of them count as "A")
+  // -------------------------------------------------------------------------
+  var NUMBERS = [
+    11111, 21111, 12111, 11211, 11121, 11112, 22111, 12211,
+    11221, 11122, 11212, 12121, 21211, 12112, 21121, 21112,
+    22211, 12221, 11222, 12122, 12212, 21122, 21212, 22112,
+    22121, 21221, 22221, 21222, 22122, 22212, 12222, 22222
   ];
 
-  const C20_ALLOWED = [0, 5, 9, 14];
-  const C15_RESTART = [0, 6, 10];
+  var A_NUMBERS = [
+    11111, 12111, 11211, 11121, 22111, 11122, 11212,
+    21121, 21112, 22121, 21221, 22221, 22222
+  ];
 
-  function matchesAnyZ(matrix, indices) {
-    return indices.some((i) => equals(matrix, Z[i]));
+  // O(1) membership check for A-list
+  var A_SET = Object.create(null);
+  for (var i = 0; i < A_NUMBERS.length; i++) {
+    A_SET[A_NUMBERS[i]] = true;
   }
 
-  function zLabel(matrix) {
-    for (let i = 0; i < Z.length; i++) {
-      if (equals(matrix, Z[i])) return i + 1;
-    }
-    return -1;
+  var COLS = 5;
+  var MAX_L = 10000;
+
+  // -------------------------------------------------------------------------
+  // DOM refs
+  // -------------------------------------------------------------------------
+  var Linput = document.getElementById("L");
+  var errEl = document.getElementById("error");
+  var wrap = document.getElementById("table-wrap");
+  var statsEl = document.getElementById("stats");
+  var toastEl = document.getElementById("toast");
+
+  var btnGenerate = document.getElementById("btn-generate");
+  var btnCopy = document.getElementById("btn-copy");
+  var btnCsv = document.getElementById("btn-csv");
+  var btnTxt = document.getElementById("btn-txt");
+
+  /**
+   * Latest run: array of rows, each row is ["A"|"N", ...] length 5.
+   * Kept in memory for CSV / TXT / Copy without re-reading the DOM.
+   */
+  var lastGrid = null; // { L, rows: string[][], totalA, totalN }
+
+  // -------------------------------------------------------------------------
+  // Core logic
+  // -------------------------------------------------------------------------
+
+  /** Pick one uniform random entry from NUMBERS. */
+  function pickNumber() {
+    return NUMBERS[(Math.random() * NUMBERS.length) | 0];
   }
 
-  function zName(matrix) {
-    const label = zLabel(matrix);
-    return label > 0 ? "Z" + label : matrixToString(matrix).replace(/\n/g, "/");
+  /** Map a pool number to 'A' or 'N'. */
+  function toLabel(n) {
+    return A_SET[n] ? "A" : "N";
   }
 
-  function shuffle(arr) {
-    const copy = arr.slice();
-    for (let i = copy.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [copy[i], copy[j]] = [copy[j], copy[i]];
-    }
-    return copy;
-  }
+  /**
+   * Build L × 5 grid of A/N labels.
+   * Fast path: plain arrays, no DOM work yet.
+   */
+  function generateGrid(L) {
+    var rows = new Array(L);
+    var totalA = 0;
+    var totalN = 0;
 
-  function combinedRow(c4, c3, c2, c1, row) {
-    const fmt = (m) => m.cells[row].join(" ");
-    return fmt(c4) + " | " + fmt(c3) + " | " + fmt(c2) + " | " + fmt(c1);
-  }
-
-  function runIteration(iteration) {
-    let text = "";
-
-    while (true) {
-      const indices = shuffle([...Array(16).keys()]);
-      const c1 = cloneMatrix(Z[indices[0]]);
-      const c2 = cloneMatrix(Z[indices[1]]);
-      const c3 = cloneMatrix(Z[indices[2]]);
-      const c4 = cloneMatrix(Z[indices[3]]);
-
-      text += "--- Iteration " + iteration + " ---\n";
-      text += "Selected: C1=" + zName(c1) + ", C2=" + zName(c2)
-        + ", C3=" + zName(c3) + ", C4=" + zName(c4) + "\n\n";
-      text += "Arrangement (C4  C3  C2  C1):\n";
-      text += "Row 1  " + combinedRow(c4, c3, c2, c1, 0) + "\n";
-      text += "Row 2  " + combinedRow(c4, c3, c2, c1, 1) + "\n";
-      text += "Row 3  " + combinedRow(c4, c3, c2, c1, 2) + "\n";
-      text += "Row 4  " + combinedRow(c4, c3, c2, c1, 3) + "\n\n";
-
-      const c5 = flipHorizontal(c1);
-      const c6 = flipHorizontal(c2);
-      const c7 = flipHorizontal(c3);
-      const c8 = flipHorizontal(c4);
-
-      const c9 = add(c1, c2);
-      const c10 = add(c3, c4);
-      const c11 = add(c5, c6);
-      const c12 = add(c7, c8);
-      const c13 = add(c9, c10);
-      const c14 = add(c11, c12);
-      const c15 = add(c13, c14);
-      const c16 = add(c15, c1);
-
-      if (matchesAnyZ(c15, C15_RESTART)) {
-        text += "C15 equals " + zName(c15) + " -> restarting iteration "
-          + iteration + " from START.\n\n";
-        continue;
+    for (var r = 0; r < L; r++) {
+      var row = new Array(COLS);
+      for (var c = 0; c < COLS; c++) {
+        var label = toLabel(pickNumber());
+        row[c] = label;
+        if (label === "A") totalA++;
+        else totalN++;
       }
-
-      const c18 = addChain(c1, c4, c7, c10);
-      const c20 = addChain(c3, c7, c11, c15);
-
-      if (matchesAnyZ(c20, C20_ALLOWED)) {
-        text += "C20 = " + zName(c20) + "\n" + matrixToString(c20) + "\n";
-      } else {
-        text += "C20 = Nil\n";
-      }
-      text += "\n";
-
-      const allC = [c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16];
-      const matches = [];
-      for (let i = 0; i < allC.length; i++) {
-        const places = countMatchingPositions(c18, allC[i]);
-        if (places >= 4) {
-          matches.push("C" + (i + 1) + " (" + places + " places)");
-        }
-      }
-
-      if (matches.length) {
-        text += "C18 matches in four or more places (iteration " + iteration + "):\n";
-        text += "C18:\n" + matrixToString(c18) + "\n\n";
-        text += "Iteration   Matching C values\n";
-        text += "---------   ------------------\n";
-        text += String(iteration).padEnd(12) + matches.join(", ") + "\n";
-      }
-
-      break;
+      rows[r] = row;
     }
 
-    return text;
+    return { L: L, rows: rows, totalA: totalA, totalN: totalN };
   }
 
-  function runProgram(L) {
-    let text = "Number of iterations: " + L + "\n\n";
-    for (let iteration = 1; iteration <= L; iteration++) {
-      text += runIteration(iteration) + "\n";
+  // -------------------------------------------------------------------------
+  // Rendering
+  // -------------------------------------------------------------------------
+
+  /**
+   * Build the results table with DocumentFragment for speed at large L.
+   * Header: Iter, 1, 2, 3, 4, 5
+   */
+  function renderTable(grid) {
+    var table = document.createElement("table");
+    table.setAttribute("aria-label", "Simulation results");
+
+    // Header
+    var thead = document.createElement("thead");
+    var hr = document.createElement("tr");
+    var headers = ["Iter", "1", "2", "3", "4", "5"];
+    for (var h = 0; h < headers.length; h++) {
+      var th = document.createElement("th");
+      th.textContent = headers[h];
+      th.scope = "col";
+      hr.appendChild(th);
     }
-    text += "END.\n";
-    return text;
+    thead.appendChild(hr);
+    table.appendChild(thead);
+
+    // Body — batch into a fragment
+    var tbody = document.createElement("tbody");
+    var frag = document.createDocumentFragment();
+    var rows = grid.rows;
+
+    for (var r = 0; r < rows.length; r++) {
+      var tr = document.createElement("tr");
+
+      var tdIter = document.createElement("td");
+      tdIter.textContent = String(r + 1);
+      tr.appendChild(tdIter);
+
+      for (var c = 0; c < COLS; c++) {
+        var td = document.createElement("td");
+        var label = rows[r][c];
+        td.textContent = label;
+        td.className = label === "A" ? "cell-a" : "cell-n";
+        tr.appendChild(td);
+      }
+
+      frag.appendChild(tr);
+    }
+
+    tbody.appendChild(frag);
+    table.appendChild(tbody);
+
+    wrap.innerHTML = "";
+    wrap.appendChild(table);
+
+    statsEl.hidden = false;
+    statsEl.textContent =
+      "Total A's: " + grid.totalA + ", Total N's: " + grid.totalN;
   }
 
-  const form = document.getElementById("form");
-  const Linput = document.getElementById("L");
-  const out = document.getElementById("out");
-  const err = document.getElementById("error");
-  const Ldisplay = document.getElementById("L-display");
+  function setButtonsEnabled(on) {
+    btnCopy.disabled = !on;
+    btnCsv.disabled = !on;
+    btnTxt.disabled = !on;
+  }
 
-  form.addEventListener("submit", function (e) {
-    e.preventDefault();
-    err.hidden = true;
-    const L = parseInt(Linput.value, 10);
+  function showError(msg) {
+    if (!msg) {
+      errEl.hidden = true;
+      errEl.textContent = "";
+      return;
+    }
+    errEl.textContent = msg;
+    errEl.hidden = false;
+  }
+
+  function showToast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(function () {
+      toastEl.classList.remove("show");
+    }, 1800);
+  }
+
+  // -------------------------------------------------------------------------
+  // Export helpers
+  // -------------------------------------------------------------------------
+
+  /** CSV: Iter,1,2,3,4,5 */
+  function toCSV(grid) {
+    var lines = ["Iter,1,2,3,4,5"];
+    for (var r = 0; r < grid.rows.length; r++) {
+      lines.push((r + 1) + "," + grid.rows[r].join(","));
+    }
+    return lines.join("\n");
+  }
+
+  /**
+   * TXT: aligned monospace columns (same spirit as console output).
+   * Example:
+   * Iter  1  2  3  4  5
+   *    1  A  N  A  N  N
+   */
+  function toTXT(grid) {
+    var iterW = Math.max(4, String(grid.L).length); // "Iter" or digit width
+    var pad = function (s, w) {
+      s = String(s);
+      while (s.length < w) s = " " + s;
+      return s;
+    };
+
+    var lines = [];
+    lines.push(
+      pad("Iter", iterW) + "  1  2  3  4  5"
+    );
+
+    for (var r = 0; r < grid.rows.length; r++) {
+      var row = grid.rows[r];
+      lines.push(
+        pad(r + 1, iterW) +
+          "  " + row[0] +
+          "  " + row[1] +
+          "  " + row[2] +
+          "  " + row[3] +
+          "  " + row[4]
+      );
+    }
+
+    lines.push("");
+    lines.push("Total A's: " + grid.totalA + ", Total N's: " + grid.totalN);
+    return lines.join("\n");
+  }
+
+  /** Trigger a browser download of a text blob. */
+  function downloadFile(filename, content, mime) {
+    var blob = new Blob([content], { type: mime || "text/plain;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  // -------------------------------------------------------------------------
+  // Event handlers
+  // -------------------------------------------------------------------------
+
+  function onGenerate() {
+    showError("");
+    var L = parseInt(Linput.value, 10);
+
     if (!Number.isFinite(L) || L < 1) {
-      err.textContent = "Enter a positive integer for L.";
-      err.hidden = false;
+      showError("Enter a positive integer for L.");
       return;
     }
-    if (L > 5000) {
-      err.textContent = "L is capped at 5000 in the browser to keep the page responsive.";
-      err.hidden = false;
+    if (L > MAX_L) {
+      showError("L is capped at " + MAX_L + " to keep the page responsive.");
       return;
     }
-    Ldisplay.textContent = "Number of iterations L = " + L;
-    out.textContent = "Running…";
+
+    // Yield to the browser so the click feels instant, then compute + paint.
+    btnGenerate.disabled = true;
     requestAnimationFrame(function () {
       try {
-        out.textContent = runProgram(L);
+        lastGrid = generateGrid(L);
+        renderTable(lastGrid);
+        setButtonsEnabled(true);
       } catch (ex) {
-        out.textContent = "";
-        err.textContent = String(ex.message || ex);
-        err.hidden = false;
+        lastGrid = null;
+        setButtonsEnabled(false);
+        showError(String(ex.message || ex));
+      } finally {
+        btnGenerate.disabled = false;
       }
     });
+  }
+
+  function onCopy() {
+    if (!lastGrid) return;
+    var text = toTXT(lastGrid);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(
+        function () { showToast("Table copied to clipboard"); },
+        function () { fallbackCopy(text); }
+      );
+    } else {
+      fallbackCopy(text);
+    }
+  }
+
+  /** Fallback for older browsers / insecure contexts. */
+  function fallbackCopy(text) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand("copy");
+      showToast("Table copied to clipboard");
+    } catch (e) {
+      showError("Could not copy to clipboard.");
+    }
+    ta.remove();
+  }
+
+  function onCsv() {
+    if (!lastGrid) return;
+    downloadFile(
+      "simulation_L" + lastGrid.L + ".csv",
+      toCSV(lastGrid),
+      "text/csv;charset=utf-8"
+    );
+  }
+
+  function onTxt() {
+    if (!lastGrid) return;
+    downloadFile(
+      "simulation_L" + lastGrid.L + ".txt",
+      toTXT(lastGrid),
+      "text/plain;charset=utf-8"
+    );
+  }
+
+  btnGenerate.addEventListener("click", onGenerate);
+  btnCopy.addEventListener("click", onCopy);
+  btnCsv.addEventListener("click", onCsv);
+  btnTxt.addEventListener("click", onTxt);
+
+  // Enter key in the L field also generates
+  Linput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      onGenerate();
+    }
   });
 })();
   </script>
